@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model ElderProfile {
+  id  String  @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+  preferredName String
+  age Int
+  email String @unique
+  phoneNumber String
+  sex SexEnum? @default(PREFER_NOT_TO_SAY)
+  medicalConditions String?
+  medications String?
+  bloodType BloodType?
+  allergies String?
+  notes String?
+  heartRateRecords HeartRateRecord[]
+  notifications Notification[]
+  defaultLocation String[]
+  emergencyContactRelationships EmergencyContactRelationship[]
+  heartRateThreshold HeartRateThreshold?
+  // caregiver connection
+  careGiverIds String[]  @db.ObjectId
+  caregiversDoc CareGiverProfile[] @relation(fields: [careGiverIds], references: [id])
+  careGiverRelationships Json?
+}
+
+model CareGiverProfile {
+  id  String  @id @default(auto()) @map("_id") @db.ObjectId
+  name String?
+  preferredName String?
+  email String @unique
+  phoneNumber String?
+  //notifications Notification[]
+  requestToken String? 
+  // elder connection
+  elderIds String[]  @db.ObjectId
+  eldersDoc ElderProfile[] @relation(fields: [elderIds], references: [id])
+}
+
+model Notification {
+  id  String  @id @default(auto()) @map("_id") @db.ObjectId
+  // elderProfileId String @map ("elderProfileId_idx")
+  // elderProfileEmail String @map("elderProfileEmail_idx")
+  timestamp DateTime @default(now())
+  type NotificationType
+  payload NotificationPayload?
+
+  // careGiverProfile CareGiverProfile? @relation(fields: [careGiverProfileId], references: [id])
+  // careGiverProfileId String @db.ObjectId
+
+  elderProfile ElderProfile @relation(fields: [elderProfileId], references: [id])
+  elderProfileId String @db.ObjectId
+
+  @@index([elderProfileId, type], name: "elderProfileId_type_idx")
+  @@index([timestamp], name: "timestamp_idx")
+}
+
+model HeartRateRecord {
+  id  String  @id @default(auto()) @map("_id") @db.ObjectId
+  elderProfile ElderProfile? @relation(fields: [elderProfileId], references: [id])
+  elderProfileId String @db.ObjectId
+  beatsPerMinute Int
+  timestamp DateTime
+  weekAverage Int
+  weekMin Int
+  weekMax Int
+  todayAverage Int?
+  todayMin Int?
+  todayMax Int?
+}
+
+//TYPE
+type EmergencyContactRelationship {
+  email String
+  relationship String?
+}
+
+type HeartRateThreshold {
+  minimum Int
+  maximum Int
+  lastUpdated DateTime @default(now())
+}
+
+type NotificationPayload {
+  message String?
+  currentMaxHeartRate Int?
+  currentMinHeartRate Int?
+  detectedAbnormalHeartRate Int?
+  location LocationWithCoordinates?
+}
+
+type LocationWithCoordinates {
+  address String?
+  latitude Float?
+  longitude Float?
+}
+
+//ENUMS
+enum NotificationType {
+  MOVEMENT_LOCATION
+  FALL_DETECTED
+  CRITICAL_HEART_RATE
+  TEST_NOTIFICATION
+}
+
+
+enum SexEnum {
+  MALE
+  FEMALE
+  PREFER_NOT_TO_SAY
+}
+
+enum BloodType {
+  A
+  B
+  AB
+  O
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
